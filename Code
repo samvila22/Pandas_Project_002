@@ -1,0 +1,688 @@
+import pandas as pd
+data_dir = "https://dlsun.github.io/pods/data/"
+df_okcupid = pd.read_csv(data_dir + "okcupid.csv")
+
+df_framingham.iloc[3]
+#4th row
+df_framingham.iloc[3:9]
+#slice of rows
+
+df_okcupid["age_cat"] = df_okcupid.age.astype(str)
+#change type
+
+df_okcupid["age"]
+#column
+df_titanic["class"].describe()
+class_counts = df_titanic["class"].value_counts()
+#normalize is props
+class_probs = df_titanic["class"].value_counts(normalize=True)
+class_probs.sort_index()
+#map to 
+def class_to_type(c):
+  if c in ["1st", "2nd", "3rd"]:
+    return "passenger"
+  else:
+    return "crew"
+
+df_titanic["class"].map(class_to_type)
+
+df_male = df_titanic[df_titanic["gender"] == "male"]
+df_male["type"].value_counts(normalize=True)
+#type props for males
+
+df_male_survivors = df_titanic[(df_titanic["gender"] == "male") & (df_titanic["survived"] == 1)]
+df_male_survivors
+#multiple filter
+
+& means "and"
+| means "or"
+~ means "not"
+
+#2 cat vars
+pd.crosstab(df_titanic["survived"], df_titanic["gender"])
+
+
+joint_survived_gender = pd.crosstab(df_titanic["survived"], df_titanic["gender"], 
+                                    normalize=True)
+
+survived = joint_survived_gender.sum(axis=1)
+gender = joint_survived_gender.sum(axis=0)
+#marginal distributions
+
+cond_survived_gender = joint_survived_gender.divide(gender, axis=1)
+#survived given gender
+
+cond_survived_gender.T.plot.bar(stacked=True)
+#stacked bar plot
+
+#transforming data
+import numpy as np
+df_ames["log(Lot Area)"] = np.log(df_ames["Lot Area"])
+df_ames["log(Lot Area)"]
+
+#combine data
+df_ames["Date Sold"] = df_ames["Yr Sold"] + df_ames["Mo Sold"] / 12
+df_ames["Date Sold"]
+
+#2 quant vars
+
+df_ames.plot.scatter(x="Gr Liv Area", y="SalePrice")
+
+df_ames["Gr Liv Area"].cov(df_ames["SalePrice"])
+
+df_ames["Gr Liv Area"].corr(df_ames["SalePrice"])
+
+#b/w quant and cat var
+df_ames.groupby("Bldg Type")["SalePrice"].mean() # [quant] (cat)
+(df_ames.groupby("Bldg Type")["SalePrice"].mean().
+ plot.bar())
+
+#mult cats
+df_ames.groupby(["Bldg Type", "House Style"])["SalePrice"].mean()
+#specific 
+df_ames.groupby(["Bldg Type", "House Style"])["SalePrice"].mean()[
+    ("1Fam", "2Story")
+]
+
+joint_gender_type_survived = pd.crosstab(
+    [df_titanic["gender"], df_titanic["type"]],
+    df_titanic["survived"],
+    normalize=True
+)
+# joint_gender_type_survived is 𝑃(survived|𝐠𝐞𝐧𝐝𝐞𝐫,𝐭𝐲𝐩𝐞)
+
+So the secret of **Simpson's Paradox** lies in two facts:
+Survival rates were generally much lower for men than for women.
+Because crew members were predominantly male, their survival rate was weighted towards the lower male survival rate, that their overall survival rate ended up being lower than the survival rate for passengers.
+Simpson's Paradox means that we have to be careful when comparing proportions from a two-way table, such as survival rates for crew and passengers. When we control for a third variable, such as gender, the direction of the effect could change!
+
+#id of max fare
+df_titanic.loc[df_titanic.fare.idxmax()]
+
+df_titanic.fare.quantile(.75) #75th quantile
+
+#var and st dev
+df_titanic.fare.var()
+df_titanic.fare.std()
+
+from altair import *
+#color could be quant or cat 
+Chart(df_housing).mark_circle().encode(
+    x="Gr Liv Area",
+    y="SalePrice",
+    color="Bldg Type"
+)
+
+#column to show many dif graphs of column type
+Chart(df_housing).mark_circle().encode(
+    x="Gr Liv Area",
+    y="SalePrice",
+    column="Bldg Type"
+)
+
+
+#----> lower the scale of x axis to get more in depth graph
+
+Chart(df_housing).mark_circle().encode(
+    x=X("Gr Liv Area", scale=Scale(domain=(0, 4000))),
+    y=Y("SalePrice", axis=Axis(format="e")),
+    column="Bldg Type"
+)
+
+#dummy vars
+
+# Pass all variables to get_dummies, dropping ones that are "other" types
+df_titanic_quant = pd.get_dummies(
+    df_titanic.drop(["name", "ticketno"], axis=1)
+)
+df_titanic_quant
+
+
+
+#scaling
+
+from sklearn.preprocessing import StandardScaler
+
+scaler = StandardScaler()
+scaler.fit(df_housing_quant)
+df_housing_st = scaler.transform(df_housing_quant)
+
+df_housing_st
+
+#eucl distance
+from sklearn.metrics.pairwise import euclidean_distances
+
+x = df_housing_st[[2927, 2498], :]
+x1 = df_housing_st[[2928, 290], :]
+
+euclidean_distances(x, x1)
+
+**POST MIDTERM**
+
+ADD JSON STUFF
+
+import pandas as pd
+
+data_dir = "http://dlsun.github.io/pods/data/names/"
+names1995 = pd.read_csv(data_dir + "yob1995.txt",
+                        header=None,
+                        names=["Name", "Sex", "Count"])
+names2015 = pd.read_csv(data_dir + "yob2015.txt",
+                        header=None,
+                        names=["Name", "Sex", "Count"])
+pd.concat([names1995, names2015])
+#^^^^ important, same columns can do it this way to merge
+
+names1995["Year"] = 1995
+names2015["Year"] = 2015
+names = pd.concat([names1995, names2015], ignore_index=True)
+names.set_index(["Name", "Sex", "Year"], inplace=True)
+
+#2 way table
+names.unstack("Year")
+names.unstack().fillna(0)
+
+names1995.merge(names2015, on=["Name", "Sex"])
+
+#if same var but different names in 2 datasets:
+# Create new DataFrames where the column names are different
+names2015_ = names2015.rename({"Sex": "Gender"}, axis=1)
+
+# This is how you merge them.
+names1995.merge(
+    names2015_,
+    left_on=("Name", "Sex"),
+    right_on=("Name", "Gender")
+)
+
+1. Make a line plot showing the popularity of your name from 1980 to 2018. How popular was your name in the year you were born? (If you have a rare name that does not appear in the data set, choose a friend's name.)
+
+names = []
+for year in range(1980,2019):
+  df = pd.read_csv(data_dir + f"yob{year}.txt",
+                        header=None,
+                        names=["Name", "Sex", "Count"])
+  df['Year'] = year
+  names.append(df)
+names = pd.concat(names)
+
+names[names['Name']=='Jayden'].groupby('Year')['Count'].sum().plot.line()
+
+names[(names['Name']=='Jonathan')&(names['Year']==1983)]
+
+#another ex: ratings by gender
+user_ratings = pd.merge(df_ratings,df_users,on='UserID')
+user_ratings.groupby('Gender')['Rating'].mean()
+
+Exercise 4. For each movie, calculate the average age of the users who rated it and the average rating. Make a scatterplot showing the relationship between age and rating, with each point representing a movie. (Optional: Use the size of each point to represent the number of users who rated the movie.)
+
+avg_age = user_ratings.groupby('MovieID')['Age'].mean().reset_index().rename({'Age':'AvgAge'},axis=1)
+avg_rating = user_ratings.groupby('MovieID')['Rating'].mean().reset_index().rename({'Rating':'AvgRating'},axis=1)
+df_movies = pd.merge(df_movies,avg_age,on='MovieID')
+
+from altair import *
+
+Chart(df_movies).mark_circle().encode(
+    x='AvgAge',
+    y='AvgRating'
+)
+
+Chart(df_movies).mark_circle().encode(
+    x='AvgAge',
+    y='AvgRating',
+    size='NumRatings'
+)
+
+types of joins:
+
+# left join
+names_left = names1995.merge(names2005, on=["Name", "Sex"], how="left")
+names_left
+
+# outer join
+names_outer = names1995.merge(names2005, on=["Name", "Sex"], how="outer")
+names_outer
+
+# inner join
+names_inner = names1995.merge(names2005, on=["Name", "Sex"], how="inner")
+names_inner
+
+movie_ratings = pd.merge(df_movies,df_ratings,on='MovieID',how='left')
+movie_ratings.head()
+
+movie_ratings['Rating'].isna().count()
+
+df_ratings1 = df_ratings[df_ratings['Rating']==1]
+df_ratings5 = df_ratings[df_ratings['Rating']==5]
+len(pd.merge(df_ratings1,df_ratings5,on='MovieID')['MovieID'].unique())
+
+**Linear Regression**
+
+from sklearn.linear_model import LinearRegression
+
+X_train = bordeaux_train[["age"]]
+X_test = bordeaux_test[["age"]]
+y_train = bordeaux_train["price"]
+
+model = LinearRegression()
+model.fit(X=X_train, y=y_train)
+model.predict(X=X_test)
+import numpy as np
+
+X_new = pd.DataFrame()
+# create a sequence of 200 evenly spaced numbers from 10 to 41
+X_new["age"] = np.linspace(10, 41, num=200)
+
+# create a Series out of the predicted values
+# (trailing underscore indicates fitted values)
+y_new_ = pd.Series(
+    model.predict(X_new), # y values in Series.plot.line()
+    index=X_new["age"]    # x values in Series.plot.line()
+)
+
+# plot the data, then the model
+bordeaux_train.plot.scatter(x="age", y="price")
+y_new_.plot.line()
+
+bordeaux_train["log(price)"] = np.log(bordeaux_train["price"])
+log_price_model = LinearRegression()
+log_price_model.fit(X=bordeaux_train[["age"]],
+                    y=bordeaux_train["log(price)"])
+
+X_new = pd.DataFrame()
+X_new["age"] = np.linspace(10, 41, num=200)
+y_new_ = pd.Series(
+    log_price_model.predict(X_new),
+    index=X_new["age"]
+)
+    
+bordeaux_train.plot.scatter(x="age", y="log(price)")
+y_new_.plot.line()
+
+K nearest :
+
+import pandas as pd
+import numpy as np
+
+data_dir = "https://dlsun.github.io/pods/data/"
+bordeaux_df = pd.read_csv(data_dir + "bordeaux.csv",
+                          index_col="year")
+
+# Split the data into training and test sets.
+bordeaux_train = bordeaux_df.loc[:1980].copy()
+bordeaux_test = bordeaux_df.loc[1981:].copy()
+
+# Log transform the target.
+bordeaux_train["log(price)"] = np.log(bordeaux_train["price"])
+
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsRegressor
+
+# Standardize the training and test data
+scaler = StandardScaler()
+X_train_st = scaler.fit_transform(X_train)
+X_new_st = scaler.transform(pd.DataFrame([x_new])) # needs to be a DataFrame
+y_train = bordeaux_train["log(price)"]
+
+# Fit k-nearest neighbors
+model = KNeighborsRegressor(n_neighbors=5)
+model.fit(X=X_train_st, y=y_train)
+model.predict(X=X_new_st)
+
+from sklearn.pipeline import make_pipeline
+
+pipeline = make_pipeline(
+          StandardScaler(),
+          KNeighborsRegressor(n_neighbors=5)
+)
+
+pipeline.fit(X=X_train, y=y_train)
+pipeline.predict(X=pd.DataFrame([x_new]))
+
+X_train = bordeaux_train[["age"]]
+y_train = bordeaux_train["log(price)"]
+
+# Fit k-nearest neighbors
+model = KNeighborsRegressor(n_neighbors=5)
+model.fit(X=X_train, y=y_train)
+
+# Define a grid of feature values.
+X_new = pd.DataFrame()
+X_new["age"] = np.linspace(10, 45, num=200)
+
+# Make predictions at those feature values.
+y_new_ = pd.Series(
+    model.predict(X_new),
+    index=X_new["age"]
+)
+
+# Plot the predictions.
+bordeaux_train.plot.scatter(x="age", y="log(price)")
+y_new_.plot.line()
+
+ct and pipleine:
+
+import pandas as pd
+df_housing = pd.read_csv("http://dlsun.github.io/pods/data/AmesHousing.txt", sep="\t")
+from sklearn.compose import make_column_transformer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+
+ct = make_column_transformer(
+    (StandardScaler(), ["Gr Liv Area", "Bedroom AbvGr", "Full Bath"]),
+    (OneHotEncoder(), ["Neighborhood", "Bldg Type"]),
+    remainder="drop"  # all other columns in X will be dropped.
+)
+ct
+
+from sklearn.pipeline import make_pipeline
+from sklearn.neighbors import KNeighborsRegressor
+
+pipeline = make_pipeline(
+    ct,
+    KNeighborsRegressor(n_neighbors=10)
+)
+
+pipeline.fit(X=df_housing[["Gr Liv Area", "Bedroom AbvGr", "Full Bath",
+                           "Neighborhood", "Bldg Type"]], 
+             y=df_housing["SalePrice"])
+
+error prediction:
+
+import pandas as pd
+import numpy as np
+
+# Extract the training data.
+data_dir = "https://dlsun.github.io/pods/data/"
+bordeaux_df = pd.read_csv(data_dir + "bordeaux.csv",
+                          index_col="year")
+bordeaux_train = bordeaux_df.loc[:1980].copy()
+bordeaux_train["log(price)"] = np.log(bordeaux_train["price"])
+
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.pipeline import make_pipeline
+
+X_train = bordeaux_train[["win", "summer"]]
+y_train = bordeaux_train["log(price)"]
+
+pipeline = make_pipeline(
+          StandardScaler(),
+          KNeighborsRegressor(n_neighbors=5)
+)
+
+pipeline.fit(X=X_train, y=y_train)
+# Calculate the model predictions on the training data.
+y_train_ = pipeline.predict(X=X_train)
+y_train_
+
+# Calculate the mean-squared error.
+mse = ((y_train - y_train_) ** 2).mean()
+mse
+
+from sklearn.metrics import mean_squared_error
+mean_squared_error(y_train, y_train_)
+rmse = np.sqrt(mse)
+rmse
+
+#or:
+# Fit a 1-nearest neighbors model.
+model = KNeighborsRegressor(n_neighbors=1)
+model.fit(X_train, y_train)
+
+# Calculate the model predictions on the training data.
+y_train_ = model.predict(X_train)
+
+# Calculate the MSE
+mean_squared_error(y_train, y_train_)
+
+more test error:
+
+import pandas as pd
+import numpy as np
+
+# Extract the training data.
+data_dir = "https://dlsun.github.io/pods/data/"
+bordeaux_df = pd.read_csv(data_dir + "bordeaux.csv",
+                          index_col="year")
+bordeaux_train = bordeaux_df.loc[:1980].copy()
+bordeaux_train["log(price)"] = np.log(bordeaux_train["price"])
+
+train = bordeaux_train.sample(frac=.5)
+val = bordeaux_train.drop(train.index)
+
+
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.pipeline import make_pipeline
+
+# extract features and label from training set
+X_train = train[["win", "summer"]]
+y_train = train["log(price)"]
+
+# define pipeline and fit to training set
+pipeline = make_pipeline(
+          StandardScaler(),
+          KNeighborsRegressor(n_neighbors=5)
+)
+pipeline.fit(X=X_train, y=y_train)
+
+from sklearn.metrics import mean_squared_error
+
+# extract features and label from validation set
+X_val = val[["win", "summer"]]
+y_val = val["log(price)"]
+
+# get model's predictions on validation set
+y_val_ = pipeline.predict(X_val)
+
+# calculate RMSE on validation set
+rmse = np.sqrt(mean_squared_error(y_val, y_val_))
+rmse
+
+#or:
+def get_val_error(train, val):
+    
+    # extract features and label from training set.
+    X_train = train[["win", "summer"]]
+    y_train = train["log(price)"]
+    
+    # eefine pipeline and fit to training set
+    pipeline = make_pipeline(
+          StandardScaler(),
+          KNeighborsRegressor(n_neighbors=5)
+    )
+    pipeline.fit(X=X_train, y=y_train)
+    
+    # extract features and label from validation set
+    X_val = val[["win", "summer"]]
+    y_val = val["log(price)"]
+    
+    # get model's predictions on validation set
+    y_val_ = pipeline.predict(X_val)
+
+    # calculate RMSE on validation set
+    rmse = np.sqrt(mean_squared_error(y_val, y_val_))
+    
+    return rmse
+
+
+get_val_error(train, val)
+
+cross valuation:
+
+from sklearn.model_selection import cross_val_score
+
+scores = cross_val_score(pipeline, 
+                         X=bordeaux_train[["win", "summer"]],
+                         y=bordeaux_train["log(price)"],
+                         scoring="neg_mean_squared_error",
+                         cv=2)
+np.sqrt(-scores).mean()
+
+k cross val
+
+#k is 4 in this case
+scores = cross_val_score(pipeline, 
+                         X=bordeaux_train[["win", "summer"]],
+                         y=bordeaux_train["log(price)"],
+                         scoring="neg_mean_squared_error",
+                         cv=4)
+np.sqrt(-scores).mean()
+
+Model selection:
+
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.pipeline import make_pipeline
+from sklearn.model_selection import cross_val_score
+
+# calculate estimate of test error for a given feature set
+def get_cv_error(features):
+  # define pipeline
+  pipeline = make_pipeline(
+      StandardScaler(),
+      KNeighborsRegressor(n_neighbors=4)
+  )
+  # calculate errors from cross-validation
+  cv_errs = -cross_val_score(pipeline, X=bordeaux_train[features], 
+                             y=bordeaux_train["log(price)"],
+                             scoring="neg_mean_squared_error", cv=10)
+  # calculate average of the cross-validation errors
+  return cv_errs.mean()
+
+# calculate and store errors for different feature sets
+errs = pd.Series()
+for features in [["win", "summer"],
+                 ["win", "summer", "age"],
+                 ["win", "summer", "age", "sep"],
+                 ["win", "summer", "age", "har"],
+                 ["win", "summer", "age", "har", "sep"]]:
+  errs[str(features)] = get_cv_error(features)
+
+errs
+
+X_train = bordeaux_train[["win", "summer", "age", "har"]]
+y_train = bordeaux_train["log(price)"]
+
+# calculate estimate of test error for a value of k
+def get_cv_error(k):
+  # define pipeline
+  pipeline = make_pipeline(
+      StandardScaler(),
+      KNeighborsRegressor(n_neighbors=k)
+  ) 
+  # calculate errors from cross-validation
+  cv_errs = -cross_val_score(pipeline, X=X_train, y=y_train,
+                             scoring="neg_mean_squared_error", cv=10)
+  # calculate average of the cross-validation errors
+  return cv_errs.mean()
+    
+ks = pd.Series(range(1, 20))
+ks.index = range(1, 20)
+test_errs = ks.apply(get_cv_error)
+
+test_errs.plot.line()
+test_errs.sort_values()
+
+from sklearn.model_selection import GridSearchCV
+
+model = KNeighborsRegressor(n_neighbors=5)
+
+# GridSearchCV will replace n_neighbors by values in param_grid.
+grid_search = GridSearchCV(model,
+                           param_grid={"n_neighbors": range(1, 20)},
+                           scoring="neg_mean_squared_error",
+                           cv=10)
+grid_search.fit(X_train, y_train)
+grid_search.best_estimator_
+pipeline = make_pipeline(
+    StandardScaler(),
+    KNeighborsRegressor(n_neighbors=5)
+) 
+
+from sklearn.model_selection import GridSearchCV
+
+grid_search = GridSearchCV(pipeline,
+                           param_grid={
+                               "kneighborsregressor__n_neighbors": range(1, 20)
+                           },
+                           scoring="neg_mean_squared_error",
+                           cv=10)
+grid_search.fit(X_train, y_train)
+grid_search.best_estimator_
+grid_search.cv_results_
+
+k nearest neighbor 
+
+import pandas as pd
+
+data_dir = "http://dlsun.github.io/pods/data/"
+df_breast = pd.read_csv(data_dir + "breast-cancer.csv")
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.pipeline import make_pipeline
+
+# define a pipeline
+pipeline = make_pipeline(
+    StandardScaler(),
+    KNeighborsClassifier(n_neighbors=10)
+)
+
+# fit the pipeline (using X_train and y_train defined above)
+pipeline.fit(X_train, y_train)
+
+# define the test data (recall that scikit-learn expects a 2D-array)
+pipeline.predict([[6, 7]])
+
+evaluating classification models (accuracy precision and recall)
+
+import pandas as pd
+
+data_dir = "http://dlsun.github.io/pods/data/"
+df_breast = pd.read_csv(data_dir + "breast-cancer.csv")
+from sklearn.neighbors import KNeighborsClassifier
+
+X_train = df_breast[["Clump Thickness", "Uniformity of Cell Size", "Uniformity of Cell Shape",
+                     "Marginal Adhesion", "Single Epithelial Cell Size", "Bare Nuclei",
+                     "Bland Chromatin", "Normal Nucleoli", "Mitoses"]]
+y_train = df_breast["Class"]
+
+model = KNeighborsClassifier(n_neighbors=10)
+model.fit(X=X_train, y=y_train)
+
+y_train_ = model.predict(X_train)
+from sklearn.metrics import accuracy_score
+accuracy_score(y_train, y_train_)
+
+from sklearn.metrics import precision_score, recall_score
+
+(precision_score(y_train == 0, y_train_ == 0),
+ recall_score(y_train == 0, y_train_ == 0))
+
+accuracy precision curve
+
+from sklearn.metrics import precision_recall_curve
+
+precisions, recalls, thresholds = precision_recall_curve(
+    y_train == 1, probas_[:, 1]
+)
+
+pd.DataFrame({
+    "precision": precisions,
+    "recall": recalls
+}).plot.line(x="recall", y="precision")
+
+precisions, recalls, thresholds = precision_recall_curve(
+    y_train == 0, probas_[:, 0]
+)
+
+pd.DataFrame({
+    "precision": precisions,
+    "recall": recalls
+}).plot.line(x="recall", y="precision")
+
+f1 score
+
+from sklearn.metrics import f1_score
+
+f1_score(y_train == 0, y_train_ == 0)
